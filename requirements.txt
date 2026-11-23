@@ -1,0 +1,7 @@
+mss>=9.0
+Pillow>=10.0
+pytesseract>=0.3.10
+pynput>=1.7
+deep-translator>=1.11
+# optional, only if you set DEEPL_API_KEY:
+# deepl>=1.16

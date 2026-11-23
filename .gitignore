@@ -1,0 +1,31 @@
+# --- Secrets: NEVER commit your API key ---
+deepl_key.txt
+.env
+.env.*
+
+# --- Python virtual environments ---
+.venv/
+.venv]/
+venv/
+env/
+
+# --- Python cache / build output ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+*.spec
+
+# --- Editors / IDEs ---
+.vscode/
+.idea/
+*.swp
+
+# --- OS junk ---
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# --- Claude desktop app: copies of files sent in chat ---
+Claude outputs/
