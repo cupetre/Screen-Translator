@@ -1,99 +1,96 @@
 # Screen Translator (SL ⇄ EN)
 
-Press a hotkey, drag a box around any Slovenian or English text on your screen, and
-the translation into the other language pops up right next to it. The direction is
-detected automatically. If it guesses wrong (most likely on a single word), click ⇄.
+A small desktop tool for translating text anywhere on your screen. Press a hotkey,
+drag a box around some text, and the translation pops up right next to it.
+It translates **Slovenian → English** and **English → Slovenian**, and it detects the
+direction automatically.
 
-| Action | Keys |
-|---|---|
-| Start a selection | **Ctrl + Alt + T**, then drag a box |
-| Cancel the selection | Esc or right-click |
-| Flip the direction (SL→EN / EN→SL) | ⇄ in the popup |
-| Copy the translation | "Copy" in the popup |
-| Move a popup | drag its header |
-| Close a popup | ✕ or Esc |
-| Quit the app | Ctrl + Alt + Q, or Ctrl + C in the console |
+It works on anything you can see: websites, PDFs, images, videos, apps, even text in
+screenshots that you can't select or copy.
+
+![Preview](preview.png)
 
 ## How it works
 
 ```
-hotkey (pynput) → freeze screen (mss) → you drag a box (tkinter overlay)
-      → crop → OCR (Tesseract, Slovenian model) → translate (Google free / DeepL)
-      → popup next to the box (tkinter)
+ Ctrl+Alt+T ──► freeze screen ──► drag a box ──► OCR ──► detect language ──► translate ──► popup
+   (pynput)        (mss)           (tkinter)   (Tesseract)  (offline check)     (DeepL)     (tkinter)
 ```
 
-The screen is frozen at the moment you press the hotkey, so what you see is exactly
-what gets read, even for video or text that changes.
+1. **Hotkey:** the script runs in the background and listens for `Ctrl+Alt+T`.
+2. **Freeze and select:** it takes a screenshot of all monitors and shows it, dimmed,
+   as a fullscreen overlay. You drag a box, and the selected area is shown un-dimmed.
+   Freezing the screen means you get exactly what you selected, even from a video.
+3. **Read the text (OCR):** the selected area is cropped, upscaled, converted to
+   grayscale, and inverted if it's dark mode. Then Tesseract reads it with the
+   Slovenian and English models. Line breaks are joined back into full sentences.
+4. **Detect the language:** a small offline check looks for č/š/ž and common
+   Slovenian or English words, so it costs no extra API call. Slovenian text is
+   translated to English, and English text to Slovenian.
+5. **Translate:** DeepL is used if a key is configured. Otherwise it uses Google
+   Translate's free endpoint. This runs in a background thread, so the UI never
+   freezes.
+6. **Popup:** the translation appears next to the box, or on the other side if
+   there's no room on screen, along with the original text underneath.
+
+## Usage
+
+| Action | Keys |
+|---|---|
+| Translate something | **Ctrl + Alt + T**, then drag a box around the text |
+| Cancel the selection | Esc or right-click |
+| Wrong direction? Flip it | **⇄** in the popup |
+| Copy the translation | **Copy** in the popup |
+| Move / close a popup | drag the header / ✕ or Esc |
+| Quit | Ctrl + Alt + Q |
 
 ## Setup (Windows)
 
-1. **Python 3.10+**: https://www.python.org/downloads/ (tick "Add python.exe to PATH").
-
-2. **Tesseract OCR**: install from the UB Mannheim build:
-   https://github.com/UB-Mannheim/tesseract/wiki
-   During install, open **Additional language data** and tick **Slovenian**.
-   Keep the default path `C:\Program Files\Tesseract-OCR\`, and the script finds it
-   automatically.
-   *Forgot Slovenian?* Download `slv.traineddata` from
-   https://github.com/tesseract-ocr/tessdata_best and put it in
-   `C:\Program Files\Tesseract-OCR\tessdata\`.
-
-3. **Python packages** (in this folder):
+1. **Install Python 3.10+.**
+2. **Install Tesseract OCR** from the
+   [UB Mannheim installer](https://github.com/UB-Mannheim/tesseract/wiki). Under
+   *Additional language data*, tick **Slovenian**. English is included by default.
+3. **Install the dependencies:**
    ```
    python -m venv .venv
    .venv\Scripts\activate
    pip install -r requirements.txt
+   pip install deepl
    ```
-
-4. **Run it**:
+4. **Add your DeepL key** (optional, but recommended): get a free one at
+   [deepl.com/pro-api](https://www.deepl.com/pro-api), then create a file called
+   `deepl_key.txt` next to the script containing only the key. This file is in
+   `.gitignore`, so it's never committed.
+5. **Run it:**
    ```
    python screen_translator.py
    ```
-   To run it without a console window: `pythonw screen_translator.py`.
-   To start it with Windows, put a shortcut to that command in
-   `shell:startup` (Win + R → `shell:startup`).
-
-## DeepL key
-
-Easiest: create a file called `deepl_key.txt` next to the script and paste only the
-key into it. Alternatively, set the `DEEPL_API_KEY` environment variable. The startup
-line shows which engine and key are in use.
-
-## Translation engine
-
-- **Default:** Google Translate's free endpoint (via `deep-translator`). No key needed,
-  but it's unofficial, so it may be rate-limited if you use it heavily.
-- **DeepL (recommended, better Slovenian):** get a free API key at
-  https://www.deepl.com/pro-api, then:
-  ```
-  pip install deepl
-  setx DEEPL_API_KEY "your-key-here"
-  ```
-  Open a new terminal afterwards. The console line at startup shows which engine is
-  active.
+   The startup line shows which translator is active. Use `pythonw` instead of
+   `python` to run it without a console window.
 
 ## Configuration
 
-At the top of `screen_translator.py`:
+These settings are at the top of `screen_translator.py`:
 
-- `HOTKEY` / `QUIT_HOTKEY`: pynput format, e.g. `"<ctrl>+<shift>+<f9>"`
-- `LANG_A`, `LANG_B`: the two languages to translate between (default `"sl"` / `"en"`)
-- `TESSERACT_LANG`: OCR models for both, joined with `+` (default `"slv+eng"`).
-  English is installed with Tesseract by default; Slovenian must be ticked.
-  For other pairs (e.g. German), also add a few common words to `_HINTS` in the
-  script so detection works.
-- `POPUP_WIDTH`: wrap width of the popup
-- Environment variable `TESSERACT_CMD`: full path to `tesseract.exe` if it's not in
-  the default location
+- `HOTKEY` / `QUIT_HOTKEY`: the hotkeys, e.g. `"<ctrl>+<shift>+<f9>"`
+- `LANG_A` / `LANG_B`: the language pair (default `sl` / `en`)
+- `TESSERACT_LANG`: the OCR models (default `slv+eng`)
+- `POPUP_WIDTH`: how wide the popup is
 
-## Tips and troubleshooting
+## Tech stack
 
-- **Hotkey does nothing:** some apps running as admin swallow keys. Run the script
-  as admin too, or pick a different hotkey.
-- **Selection is offset on a scaled display (125%/150%):** the script sets DPI
-  awareness on start, so this shouldn't happen. If it does, tell me your monitor
-  setup.
-- **Garbage OCR:** select only the text, with a bit of margin, not whole windows with
-  icons. Very small or stylised fonts are the hardest. Zoom the page in (Ctrl +) first.
-- **macOS:** allow Terminal/Python under *Screen Recording* and *Accessibility*.
-  **Linux:** works on X11 only (not Wayland).
+Python · tkinter · [Tesseract OCR](https://github.com/tesseract-ocr/tesseract) ·
+[mss](https://github.com/BoboTiG/python-mss) · [pynput](https://github.com/moses-palmer/pynput) ·
+[DeepL API](https://www.deepl.com/pro-api) · Pillow
+
+## Troubleshooting
+
+- **"Tesseract is not installed":** set the `TESSERACT_CMD` environment variable to
+  the full path of `tesseract.exe`.
+- **"missing language data: slv":** put `slv.traineddata` (from
+  [tessdata_best](https://github.com/tesseract-ocr/tessdata_best)) into
+  `C:\Program Files\Tesseract-OCR\tessdata\`.
+- **Translator shows "Google (free)" instead of DeepL:** check that `deepl_key.txt`
+  is in the same folder as the script, and that it isn't named `deepl_key.txt.txt`.
+- **Bad OCR results:** select just the text with a little margin around it. For
+  tiny fonts, zoom in first (Ctrl +).
